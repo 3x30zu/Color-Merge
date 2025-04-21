@@ -3,9 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Merge with Animated Gradient & Particles</title>
+    <title>Color Merge с градиентом и частицами</title>
     <style>
-        /* --- Animated two-color gradient background --- */
+        /* Отключаем поведение прокрутки */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overscroll-behavior: none;
+            overflow: hidden;
+        }
+
+        /* --- Анимированный двухцветный градиент --- */
         @keyframes gradientBG {
             0% {
                 background: linear-gradient(45deg, #ff7e5f, #feb47b);
@@ -18,14 +26,12 @@
             }
         }
         body {
-            margin: 0;
-            overflow: hidden;
             font-family: Arial, sans-serif;
             animation: gradientBG 10s ease infinite;
             background-size: 200% 200%;
         }
 
-        /* --- Particle canvas --- */
+        /* Частицы */
         #particles {
             position: fixed;
             top: 0;
@@ -36,7 +42,7 @@
             z-index: -1;
         }
 
-        /* --- Game UI --- */
+        /* UI игры */
         #header {
             text-align: center;
             margin: 20px;
@@ -65,6 +71,7 @@
             padding: 10px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.2);
             backdrop-filter: blur(10px);
+            touch-action: none; /* Отключаем браузерные жесты внутри игры */
         }
         #grid {
             position: relative;
@@ -118,7 +125,6 @@
     </style>
 </head>
 <body>
-    <!-- Particle background canvas -->
     <canvas id="particles"></canvas>
 
     <div id="header">
@@ -135,7 +141,12 @@
     </div>
 
     <script>
-        // -------- Game logic (unchanged) --------
+        // Отключаем скроллинг при touchmove
+        window.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        // --------- Логика игры (как было) ---------
         const size = 6;
         const colors = ['#fbe9e7','#ffccbc','#ffe0b2','#fff3e0','#e0f2f1','#e1f5fe','#ede7f6'];
         let grid = [], score = 0;
@@ -255,7 +266,7 @@
                 move(dy > 0 ? 'down'  : 'up');
         });
 
-        // -------- Particle system --------
+        // ------- Система частиц -------
         const canvas = document.getElementById('particles');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -290,12 +301,8 @@
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(255,255,255,0.8)';
                 ctx.fill();
-
-                // move
                 p.x += p.speedX;
                 p.y += p.speedY;
-
-                // wrap around edges
                 if (p.x < 0)               p.x = canvas.width;
                 if (p.x > canvas.width)    p.x = 0;
                 if (p.y < 0)               p.y = canvas.height;
@@ -308,7 +315,7 @@
             requestAnimationFrame(animateParticles);
         }
 
-        // -------- Init all --------
+        // Инициализация
         resizeCanvas();
         initParticles();
         animateParticles();

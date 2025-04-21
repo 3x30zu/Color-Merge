@@ -9,10 +9,12 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
+      overscroll-behavior: none;    /* Отключаем «потягивание» страницы */
+      touch-action: none;           /* Отключаем системные жесты */
       font-family: Arial, sans-serif;
     }
     body {
-      /* Гладкий анимированный градиент */
+      /* Гладкий анимированный фиолетовый градиент */
       background: linear-gradient(45deg, #6a0dad, #d3b4f5, #6a0dad);
       background-size: 400% 400%;
       animation: gradientBG 20s ease infinite;
@@ -40,6 +42,7 @@
       padding: 10px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
       backdrop-filter: blur(10px);
+      touch-action: none;  /* Дезактивируем системные свайпы внутри игры */
     }
     #grid {
       position: relative;
@@ -106,6 +109,9 @@
   <canvas id="particles"></canvas>
 
   <script>
+    // Предотвращаем любое системное скроллирование/потягивание
+    window.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+
     const size = 6;
     const colors = ['#ff4d4d','#ff944d','#ffd24d','#b6ff4d','#4dffc3','#4da6ff','#a64dff'];
     let tiles = [], nextId = 0, score = 0, animating = false;
@@ -157,6 +163,7 @@
       animating = true;
       let moved = false;
       const groups = [];
+
       for (let i = 0; i < size; i++) {
         const line = [];
         for (let j = 0; j < size; j++) {
@@ -193,18 +200,18 @@
             }
           }
         }
-
         line.forEach((tile, k) => {
           let newI, newJ;
           if (dir === 'left')  { newI = idx; newJ = k; }
           if (dir === 'right') { newI = idx; newJ = size-1-k; }
-          if (dir === 'up')    { newI = k; newJ = idx; }
+          if (dir === 'up')    { newI = k;   newJ = idx; }
           if (dir === 'down')  { newI = size-1-k; newJ = idx; }
           if (tile.i !== newI || tile.j !== newJ) moved = true;
           tile.i = newI; tile.j = newJ;
         });
       });
 
+      // Двигаем все плитки
       tiles.forEach(t => {
         t.el.style.transform = `translate(${t.j*60}px,${t.i*60}px) scale(1)`;
       });
@@ -235,6 +242,7 @@
       init();
     }
 
+    // Управление клавиатурой и свайп
     window.addEventListener('keydown', e => {
       const map = { ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down' };
       if (map[e.key]) {
@@ -242,6 +250,7 @@
         move(map[e.key]);
       }
     });
+
     let touchStartX, touchStartY;
     window.addEventListener('touchstart', e => {
       const t = e.changedTouches[0];
@@ -250,11 +259,11 @@
     window.addEventListener('touchend', e => {
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
-      if (Math.abs(dx)<30 && Math.abs(dy)<30) return;
-      move(Math.abs(dx)>Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up'));
+      if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return;
+      move(Math.abs(dx) > Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up'));
     });
 
-    // Фоновые частицы
+    // Летающие частицы фона
     const canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
     let particles = [], particleCount = 100;
     function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
@@ -289,6 +298,7 @@
     }
     resizeCanvas(); initParticles(); animateParticles();
 
+    // Запуск
     init();
   </script>
 </body>

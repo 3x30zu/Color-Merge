@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Merge with Animated Gradient & Particles</title>
+    <style>
+        /* --- Animated two-color gradient background --- */
+        @keyframes gradientBG {
+            0% {
+                background: linear-gradient(45deg, #ff7e5f, #feb47b);
+            }
+            50% {
+                background: linear-gradient(135deg, #feb47b, #ff7e5f);
+            }
+            100% {
+                background: linear-gradient(225deg, #ff7e5f, #feb47b);
+            }
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            animation: gradientBG 10s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        /* --- Particle canvas --- */
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* --- Game UI --- */
+        #header {
+            text-align: center;
+            margin: 20px;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        #header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        #score {
+            margin-top: 5px;
+            font-size: 1.25rem;
+        }
+        #instr {
+            margin-top: 5px;
+            font-size: 1rem;
+        }
+        #game {
+            position: relative;
+            width: 360px;
+            height: 360px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+        #grid {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .cell {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+        .tile {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: rgba(0,0,0,0.3);
+            font-size: 14px;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #message button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            border: none;
+            background: #c3b299;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Particle background canvas -->
+    <canvas id="particles"></canvas>
+
+    <div id="header">
+        <h1>Color Merge</h1>
+        <div id="score">Очки: 0</div>
+        <p id="instr">Используйте стрелки или свайп для передвижения</p>
+    </div>
+    <div id="game">
+        <div id="grid"></div>
+        <div id="message">
+            <div id="msg-text"></div>
+            <button onclick="restart()">Начать заново</button>
+        </div>
+    </div>
+
+    <script>
+        // -------- Game logic (unchanged) --------
+        const size = 6;
+        const colors = ['#fbe9e7','#ffccbc','#ffe0b2','#fff3e0','#e0f2f1','#e1f5fe','#ede7f6'];
+        let grid = [], score = 0;
+        let touchStartX, touchStartY, threshold = 30;
+
+        function init() {
+            grid = Array.from({ length: size }, () => Array(size).fill(-1));
+            score = 0; updateScore();
+            const gridEl = document.getElementById('grid'); gridEl.innerHTML = '';
+            for (let i=0; i<size; i++) for (let j=0; j<size; j++) {
+                const cell = document.createElement('div'); cell.className = 'cell';
+                cell.style.transform = `translate(${j*60}px,${i*60}px)`;
+                gridEl.appendChild(cell);
+            }
+            spawn(); spawn(); render();
+        }
+        function spawn(){
+            const empties = [];
+            grid.forEach((r,i)=>r.forEach((v,j)=>{ if(v<0) empties.push({i,j}); }));
+            if(!empties.length) return;
+            const {i,j} = empties[Math.floor(Math.random()*empties.length)];
+            grid[i][j] = Math.random() < 0.7 ? 0 : 1;
+        }
+        function render(){
+            const gridEl = document.getElementById('grid');
+            gridEl.querySelectorAll('.tile').forEach(t=>t.remove());
+            grid.forEach((row,i)=>row.forEach((v,j)=>{ if(v>=0){
+                const tile = document.createElement('div'); tile.className = 'tile';
+                tile.style.background = colors[v];
+                tile.style.transform = `translate(${j*60}px,${i*60}px)`;
+                gridEl.appendChild(tile);
+            }}));
+        }
+        function move(dir){
+            let moved = false;
+            for(let i=0; i<size; i++){
+                let line = [];
+                for(let j=0; j<size; j++){
+                    let v;
+                    if(dir==='left')  v = grid[i][j];
+                    if(dir==='right') v = grid[i][size-1-j];
+                    if(dir==='up')    v = grid[j][i];
+                    if(dir==='down')  v = grid[size-1-j][i];
+                    line.push(v);
+                }
+                const nl = process(line);
+                for(let j=0; j<size; j++){
+                    let x,y;
+                    if(dir==='left')  { x = i;     y = j; }
+                    if(dir==='right') { x = i;     y = size-1-j; }
+                    if(dir==='up')    { x = j;     y = i; }
+                    if(dir==='down')  { x = size-1-j; y = i; }
+                    if(grid[x][y] !== nl[j]) moved = true;
+                    grid[x][y] = nl[j];
+                }
+            }
+            if(moved){ spawn(); render(); checkEnd(); }
+        }
+        function process(arr){
+            const a = arr.filter(v=>v>=0), res = [];
+            let skip = false;
+            for(let k=0; k<a.length; k++){
+                if(skip){ skip = false; continue; }
+                if(k < a.length - 1 && a[k] === a[k+1] && a[k] < colors.length - 1){
+                    res.push(a[k] + 1);
+                    score++; updateScore();
+                    skip = true;
+                } else res.push(a[k]);
+            }
+            while(res.length < size) res.push(-1);
+            return res;
+        }
+        function checkEnd(){
+            for(let i=0; i<size; i++) for(let j=0; j<size; j++){
+                if(grid[i][j] === -1) return;
+                if(j < size-1 && grid[i][j] === grid[i][j+1]) return;
+                if(i < size-1 && grid[i][j] === grid[i+1][j]) return;
+            }
+            showMessage('Игра окончена!');
+        }
+        function showMessage(text){
+            const msg = document.getElementById('message');
+            document.getElementById('msg-text').textContent = text;
+            msg.style.display = 'block';
+        }
+        function restart(){
+            document.getElementById('message').style.display = 'none';
+            init();
+        }
+        function updateScore(){
+            document.getElementById('score').textContent = 'Очки: ' + score;
+        }
+        window.addEventListener('keydown', e=>{
+            if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+                e.preventDefault();
+                move({
+                    ArrowLeft:  'left',
+                    ArrowRight: 'right',
+                    ArrowUp:    'up',
+                    ArrowDown:  'down'
+                }[e.key]);
+            }
+        });
+        window.addEventListener('touchstart', e=>{
+            const t = e.changedTouches[0];
+            touchStartX = t.clientX;
+            touchStartY = t.clientY;
+        });
+        window.addEventListener('touchend', e=>{
+            const t = e.changedTouches[0];
+            const dx = t.clientX - touchStartX;
+            const dy = t.clientY - touchStartY;
+            if(Math.abs(dx) < threshold && Math.abs(dy) < threshold) return;
+            if(Math.abs(dx) > Math.abs(dy))
+                move(dx > 0 ? 'right' : 'left');
+            else
+                move(dy > 0 ? 'down'  : 'up');
+        });
+
+        // -------- Particle system --------
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 100;
+
+        function resizeCanvas() {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initParticles();
+        });
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x:      Math.random() * canvas.width,
+                    y:      Math.random() * canvas.height,
+                    size:   Math.random() * 3 + 1,
+                    speedX: (Math.random() - 0.5) * 1,
+                    speedY: (Math.random() - 0.5) * 1
+                });
+            }
+        }
+
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.fill();
+
+                // move
+                p.x += p.speedX;
+                p.y += p.speedY;
+
+                // wrap around edges
+                if (p.x < 0)               p.x = canvas.width;
+                if (p.x > canvas.width)    p.x = 0;
+                if (p.y < 0)               p.y = canvas.height;
+                if (p.y > canvas.height)   p.y = 0;
+            });
+        }
+
+        function animateParticles() {
+            drawParticles();
+            requestAnimationFrame(animateParticles);
+        }
+
+        // -------- Init all --------
+        resizeCanvas();
+        initParticles();
+        animateParticles();
+        init();
+    </script>
+</body>
+</html>
